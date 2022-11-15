@@ -9,10 +9,11 @@ import (
 
 var (
 	GITHUB_TOKEN        = ""
-	GIT_REPOSITORY_URL  = "git@github.com:beopencloud/beopenMairieAPI.git"
-	GIT_REPOSITORY_NAME = "beopenMairieAPI"
-	GIT_BRANCH          = "develop"
-	PUBLISH_ADDRESS     = "lykss/dagger"
+	GIT_REPOSITORY_URL  = ""
+	GIT_REPOSITORY_SSH  = ""
+	GIT_REPOSITORY_NAME = ""
+	GIT_BRANCH          = ""
+	PUBLISH_ADDRESS     = ""
 )
 
 func init() {
@@ -23,6 +24,7 @@ func init() {
 
 	GITHUB_TOKEN = getStringEnv("GITHUB_TOKEN", GITHUB_TOKEN)
 	GIT_REPOSITORY_URL = getStringEnv("GIT_REPOSITORY_URL", GIT_REPOSITORY_URL)
+	GIT_REPOSITORY_SSH = getStringEnv("GIT_REPOSITORY_SSH", GIT_REPOSITORY_SSH)
 	GIT_REPOSITORY_NAME = getStringEnv("GIT_REPOSITORY_NAME", GIT_REPOSITORY_NAME)
 	GIT_BRANCH = getStringEnv("GIT_BRANCH", GIT_BRANCH)
 	PUBLISH_ADDRESS = getStringEnv("PUBLISH_ADDRESS", PUBLISH_ADDRESS)
