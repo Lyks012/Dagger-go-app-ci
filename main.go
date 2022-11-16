@@ -2,16 +2,24 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"golang-app-ci/config"
+	appconfig "golang-app-ci/config"
 	"os"
 
 	"dagger.io/dagger"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/storage/memory"
 )
 
-const IMAGE_TAG = "1.1.1"
-
 func main() {
+	imageTag, err := getLastCommitHash()
+	if err != nil {
+		fmt.Println("Could not get last commit tag from github:", err)
+		fmt.Println("Using default commit tag :", imageTag)
+	}
+
 	ctx := context.Background()
 
 	outputFile, err := os.Create("CI.out")
@@ -27,7 +35,7 @@ func main() {
 	}
 	fmt.Println("Client connected successfully !")
 
-	codeSrc := client.Git(config.GIT_REPOSITORY_SSH).Branch(config.GIT_BRANCH).Tree()
+	codeSrc := client.Git(appconfig.GIT_REPOSITORY_SSH).Branch(appconfig.GIT_BRANCH).Tree()
 
 	// test step
 	fmt.Println("Testing ...")
@@ -53,10 +61,10 @@ func main() {
 	// vuln scan with trivy
 	fmt.Println("Scanning with trivy")
 
-	trivyContainer := client.Container().From("bitnami/trivy:0.34.0-debian-11-r4").WithEnvVariable("GITHUB_TOKEN", config.GITHUB_TOKEN)
+	trivyContainer := client.Container().From("bitnami/trivy:0.34.0-debian-11-r4").WithEnvVariable("GITHUB_TOKEN", appconfig.GITHUB_TOKEN)
 
 	resultVunlScan := trivyContainer.Exec(dagger.ContainerExecOpts{
-		Args: []string{"repo", "--no-progress", "--branch", "main", config.GIT_REPOSITORY_URL},
+		Args: []string{"repo", "--no-progress", "--branch", "main", appconfig.GIT_REPOSITORY_URL},
 	})
 
 	vulnScanExitcode, err := resultVunlScan.ExitCode(ctx)
@@ -76,12 +84,39 @@ func main() {
 
 	goApp := client.Container().Build(codeSrc)
 
-	address, err := goApp.Publish(ctx, config.PUBLISH_ADDRESS+":"+IMAGE_TAG, dagger.ContainerPublishOpts{})
+	address, err := goApp.Publish(ctx, appconfig.PUBLISH_ADDRESS+":"+imageTag, dagger.ContainerPublishOpts{})
 	if err != nil {
-		fmt.Println("Could not publish container to:", config.PUBLISH_ADDRESS)
+		fmt.Println("Could not publish container to:", appconfig.PUBLISH_ADDRESS)
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	fmt.Println("Container published at:", address)
+}
+
+func getLastCommitHash() (string, error) {
+	commitHash := "1.0.0"
+	defaultHashUsed := true
+
+	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{appconfig.GIT_REPOSITORY_SSH},
+	})
+
+	refs, err := rem.List(&git.ListOptions{})
+	if err != nil {
+		return commitHash, err
+	}
+
+	for _, ref := range refs {
+		if ref.Name().String() == ("refs/heads/" + appconfig.GIT_BRANCH) {
+			commitHash = ref.Hash().String()
+			defaultHashUsed = false
+		}
+	}
+
+	if defaultHashUsed {
+		return commitHash, errors.New("Did not find refs/heads/" + appconfig.GIT_BRANCH + ". Maybe branch does not exist!")
+	}
+	return commitHash, nil
 }
