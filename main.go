@@ -36,6 +36,8 @@ func main() {
 	fmt.Println("Client connected successfully !")
 
 	codeSrc := client.Git(appconfig.GIT_REPOSITORY_SSH).Branch(appconfig.GIT_BRANCH).Tree()
+	src := client.Host().Workdir()
+	codeSrc = codeSrc.WithFile("Dockerfile", src.File("Dockerfile"))
 
 	// test step
 	fmt.Println("Testing ...")
