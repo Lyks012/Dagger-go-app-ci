@@ -3,11 +3,12 @@ WORKDIR /app
 COPY go.mod ./
 RUN go mod tidy
 COPY . ./
-RUN go build -o beopenmairie
+RUN apk add build-base
+RUN go build -o cno-api
 
 FROM alpine:3.16.2
 WORKDIR /app
-COPY --from=cno-api /app/beopenmairie .
+COPY --from=cno-api /app/cno-api .
 EXPOSE 8080
 
-CMD [ "./beopenmairie" ]
+CMD [ "./cno-api" ]
