@@ -6,6 +6,7 @@ import (
 	"fmt"
 	appconfig "golang-app-ci/config"
 	"os"
+	"time"
 
 	"dagger.io/dagger"
 	"github.com/go-git/go-git/v5"
@@ -63,10 +64,10 @@ func main() {
 	// vuln scan with trivy
 	fmt.Println("Scanning with trivy")
 
-	trivyContainer := client.Container().From("bitnami/trivy:0.34.0-debian-11-r4").WithEnvVariable("GITHUB_TOKEN", appconfig.GITHUB_TOKEN)
+	trivyContainer := client.Container().From("bitnami/trivy:0.34.0-debian-11-r4").WithEnvVariable("GITHUB_TOKEN", appconfig.GITHUB_TOKEN).WithEnvVariable("CACHEBUSTER", time.Now().String())
 
 	resultVunlScan := trivyContainer.Exec(dagger.ContainerExecOpts{
-		Args: []string{"repo", "--no-progress", "--branch", "main", appconfig.GIT_REPOSITORY_URL},
+		Args: []string{"repo", "--no-progress", appconfig.GIT_BRANCH, "main", appconfig.GIT_REPOSITORY_URL},
 	})
 
 	vulnScanExitcode, err := resultVunlScan.ExitCode(ctx)
